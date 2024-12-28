@@ -177,6 +177,9 @@ pub enum Error {
     #[error("{module} does not have a main function")]
     ModuleDoesNotHaveMainFunction { module: EcoString },
 
+    #[error("The package does not export values, functions or types")]
+    PackageHasEmptyModules,
+
     #[error("{module}'s main function has the wrong arity so it can not be run")]
     MainFunctionHasWrongArity { module: EcoString, arity: usize },
 
@@ -892,6 +895,16 @@ forward slash and must not end with a slash."
                     "Add a public `main` function to \
 to `src/{module}.gleam`."
                 )),
+            }],
+
+            Error::PackageHasEmptyModules => vec![Diagnostic {
+                title: "The package modules does not export anything".into(),
+                text: {
+                    "Some of the package modules does not contains any exported function, const value or type.".into()
+                },
+                level: Level::Error,
+                location: None,
+                hint: Some("Consider exporting a function, a const value or a type using the `pub` keyword.".into()),
             }],
 
             Error::MainFunctionDoesNotSupportTarget { module, target } => vec![Diagnostic {

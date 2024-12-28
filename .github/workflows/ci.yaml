@@ -455,3 +455,7 @@ jobs:
       - name: test/unicode_path
         run: make
         working-directory: ./test/unicode_path ⭐
+
+      - name: Test Publish with empty modules
+        run: ./test.sh
+        working-directory: ./test/publish_empty_modules

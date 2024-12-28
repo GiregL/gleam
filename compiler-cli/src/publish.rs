@@ -15,7 +15,7 @@ use hexpm::version::{Range, Version};
 use itertools::Itertools;
 use sha2::Digest;
 use std::{io::Write, path::PathBuf, time::Instant};
-
+use gleam_core::ast::{Publicity, TypedDefinition};
 use crate::{build, cli, docs, fs, http::HttpClient};
 
 pub fn command(replace: bool, i_am_sure: bool) -> Result<()> {
@@ -40,6 +40,7 @@ pub fn command(replace: bool, i_am_sure: bool) -> Result<()> {
 
     check_for_name_squatting(&compile_result)?;
     check_for_multiple_top_level_modules(&compile_result, i_am_sure)?;
+    check_for_empty_modules(&compile_result)?;
 
     // Build HTML documentation
     let docs_tarball = fs::create_tar_archive(docs::build_documentation(
@@ -752,4 +753,56 @@ fn prevent_publish_git_dependency() {
 
 fn quotes(x: &str) -> String {
     format!(r#"<<"{x}">>"#)
+}
+
+// Function that checks if the modules of a package exports at least one thing.
+// Otherwise, it throws an error and cancels the publication.
+fn check_for_empty_modules(package: &Package) -> Result<(), Error> {
+    let mut empty_module_names: Vec<String> = Vec::new();
+    let mut has_empty_modules = false;
+
+    for module in package.modules.iter() {
+        let mut exports_something = false;
+
+        for definition in &module.ast.definitions {
+            match definition {
+                TypedDefinition::Function(function) => {
+                    if function.publicity == Publicity::Public {
+                        exports_something = true;
+                    }
+                }
+                TypedDefinition::TypeAlias(type_alias) => {
+                    if type_alias.publicity == Publicity::Public {
+                        exports_something = true;
+                    }
+                }
+                TypedDefinition::CustomType(custom_type) => {
+                    if custom_type.publicity == Publicity::Public {
+                        exports_something = true;
+                    }
+                }
+                TypedDefinition::Import(_) => {}
+                TypedDefinition::ModuleConstant(constant) => {
+                    if constant.publicity == Publicity::Public {
+                        exports_something = true;
+                    }
+                }
+            }
+        }
+        // If only one module does not exports anything, we throw the error.
+        if !exports_something {
+            empty_module_names.push(String::from(module.name.as_str()));
+            has_empty_modules = true;
+        }
+    }
+
+    if has_empty_modules {
+        let empty_module_names = empty_module_names.join(",");
+        let error_message = format!("The given modules : {empty_module_names} does not provide any public definitions.");
+        tracing::error!("{}", error_message);
+
+        Err(Error::PackageHasEmptyModules)
+    } else {
+        Ok(())
+    }
 }
