@@ -14,7 +14,7 @@ rm -fr build
 
 echo Running publish should not publish anything
 output=$(yes "n" | g publish)
-if echo "$output" | grep -q "The package modules does not export anything"; then
+if echo "$output" | grep -q " does not provide any public definitions."; then
     echo "Publish was correctly prevented with error"
 else
     echo "Expected publish to be aborted"
