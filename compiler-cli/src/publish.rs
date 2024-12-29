@@ -1,5 +1,7 @@
+use crate::{build, cli, docs, fs, http::HttpClient};
 use camino::{Utf8Path, Utf8PathBuf};
 use flate2::{write::GzEncoder, Compression};
+use gleam_core::ast::{Publicity, TypedDefinition};
 use gleam_core::{
     analyse::TargetSupport,
     build::{Codegen, Compile, Mode, Options, Package, Target},
@@ -15,8 +17,6 @@ use hexpm::version::{Range, Version};
 use itertools::Itertools;
 use sha2::Digest;
 use std::{io::Write, path::PathBuf, time::Instant};
-use gleam_core::ast::{Publicity, TypedDefinition};
-use crate::{build, cli, docs, fs, http::HttpClient};
 
 pub fn command(replace: bool, i_am_sure: bool) -> Result<()> {
     let paths = crate::find_project_paths()?;
@@ -798,7 +798,9 @@ fn check_for_empty_modules(package: &Package) -> Result<(), Error> {
 
     if has_empty_modules {
         let empty_module_names = empty_module_names.join(",");
-        let error_message = format!("The given modules : {empty_module_names} does not provide any public definitions.");
+        let error_message = format!(
+            "The given modules : {empty_module_names} does not provide any public definitions."
+        );
         tracing::error!("{}", error_message);
 
         Err(Error::PackageHasEmptyModules)
